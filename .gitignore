@@ -106,3 +106,14 @@ dmypy.json
 cython_debug/
 
 data/
+JSON2YOLO/
+/.neptune
+/.vscode
+datasets/
+models/
+runs/
+*.pt
+*.ckpt
+KSS/
+lightning_logs/
+.idea/

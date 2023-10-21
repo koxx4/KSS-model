@@ -1,0 +1,14 @@
+nc: 10
+names: ['closed_pan', 'closed_pot', 'closed_pot_boiling', 'fire', 'gas', 'human', 'open_pot', 'open_pot_boiling', 'other', 'pan']
+roboflow:
+  workspace: diploma-2023
+  project: kitchen-safety-system
+  version: 5
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/diploma-2023/kitchen-safety-system/dataset/4
+
+test: Kitchen-Safety-System-6/test/images
+train: Kitchen-Safety-System-6/train/images
+val: Kitchen-Safety-System-6/valid/images
+mosaic: 0.3  # image mosaic (probability)
+mixup: 0.1  # image mixup (probability)

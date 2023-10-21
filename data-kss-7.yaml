@@ -1,0 +1,23 @@
+nc: 11
+names:
+- closed_pan
+- closed_pot
+- closed_pot_boiling
+- dish
+- fire
+- gas
+- human
+- open_pot
+- open_pot_boiling
+- other
+- pan
+roboflow:
+  workspace: diploma-2023
+  project: kitchen-safety-system
+  version: 7
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/diploma-2023/kitchen-safety-system/dataset/4
+
+test: Kitchen-Safety-System-7/test/images
+train: Kitchen-Safety-System-7/train/images
+val: Kitchen-Safety-System-7/valid/images
