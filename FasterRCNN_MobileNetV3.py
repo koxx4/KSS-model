@@ -7,9 +7,9 @@ from roboflow import Roboflow
 from torch import optim
 import torch.utils.data
 import torchvision
-from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_fpn, FasterRCNN_MobileNet_V3_Large_FPN_Weights
+from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_fpn, FasterRCNN_MobileNet_V3_Large_FPN_Weights, fasterrcnn_mobilenet_v3_large_320_fpn, FasterRCNN_MobileNet_V3_Large_320_FPN_Weights
 import lightning.pytorch as pl
-from pytorch_lightning.callbacks import ModelCheckpoint
+from lightning.pytorch.callbacks import ModelCheckpoint, ModelPruning
 from pytorch_lightning.loggers import CometLogger
 from torchmetrics.detection import MeanAveragePrecision
 import statistics
@@ -33,7 +33,7 @@ project = rf.workspace("diploma-2023").project("kitchen-safety-system")
 dataset = project.version(7).download(
     "coco", location="./datasets/Kitchen-Safety-System-7-COCO", overwrite=False)
 
-EXPERIMENT_NAME = 'FASTERRCNN.MOBILENETV3-V7-PCM-1'
+EXPERIMENT_NAME = 'FASTERRCNN.MOBILENETV3-320-V7-PCM-1'
 
 comet_logger = CometLogger(api_key=COMETML_API_KEY,
                            experiment_name=EXPERIMENT_NAME, project_name="KSS")
@@ -119,8 +119,8 @@ class RipoDataset(torch.utils.data.Dataset):
         return len(self.ids)
 
 
-TRAIN_BATCH_SIZE = 64
-VALIDATION_BATCH_SIZE = 64
+TRAIN_BATCH_SIZE = 128
+VALIDATION_BATCH_SIZE = 128
 TRAIN_DATA_DIR = 'datasets/Kitchen-Safety-System-7-COCO/train'
 TRAIN_COCO = 'datasets/Kitchen-Safety-System-7-COCO/train/_annotations.coco.json'
 VAL_DATA_DIR = 'datasets/Kitchen-Safety-System-7-COCO/valid/'
@@ -140,15 +140,8 @@ comet_logger.log_hyperparams({
 })
 
 
-def get_transform():
-    custom_transforms = []
-    custom_transforms.append(torchvision.transforms.ToTensor())
-    return torchvision.transforms.Compose(custom_transforms)
-
-
 def collate_fn(batch):
     return tuple(zip(*batch))
-
 
 device = torch.device(
     'cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -157,15 +150,13 @@ if torch.cuda.is_available():
     print(f'Masz kompatybilne GPU: {torch.cuda.get_device_name(0)}')
     torch.cuda.empty_cache()
 
-
 def get_model_instance():
     # Step 1: Initialize model with the best available weights
-    weights = FasterRCNN_MobileNet_V3_Large_FPN_Weights.COCO_V1
-    model = fasterrcnn_mobilenet_v3_large_fpn(
+    weights = FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.COCO_V1
+    model = fasterrcnn_mobilenet_v3_large_320_fpn(
         weights=weights, box_score_thresh=0.8)
 
     return model, weights.transforms()
-
 
 class FasterRCNNMobileNetV3(pl.LightningModule):
     def __init__(self, model):
@@ -242,7 +233,8 @@ class FasterRCNNMobileNetV3(pl.LightningModule):
 
         score_mean_val = statistics.mean(scores) if len(scores) > 0 else 0.0
 
-        self.logger.log_metrics({"val/score_mean_val": score_mean_val}, step=batch_idx)
+        self.logger.log_metrics(
+            {"val/score_mean_val": score_mean_val}, step=batch_idx)
 
         self.log("val/score_mean_val", score_mean_val, prog_bar=True)
 
@@ -280,7 +272,7 @@ class FasterRCNNMobileNetV3(pl.LightningModule):
         return optimizer
 
 
-torch.set_float32_matmul_precision('medium')
+torch.set_float32_matmul_precision('low')
 model_instance, model_transforms = get_model_instance()
 
 autoencoder = FasterRCNNMobileNetV3(model=model_instance)
@@ -314,12 +306,12 @@ validation_data_loader = torch.utils.data.DataLoader(ripo_validation_dataset,
 
 checkpoint_callback = ModelCheckpoint(
     monitor='train/loss',
-    filename='kss-frcnnmnv3-v7-{epoch:02d}-{val_loss:.2f}',
+    filename='kss-frcnnmnv3-320-v7-{epoch:02d}-{train_loss:.2f}',
     save_top_k=3,
     mode='min',
 )
 
-trainer = pl.Trainer(max_epochs=num_epochs, logger=comet_logger)
+trainer = pl.Trainer(enable_progress_bar=True, max_epochs=num_epochs, logger=comet_logger, callbacks=[checkpoint_callback])
 
 trainer.fit(model=autoencoder, train_dataloaders=train_data_loader,
             val_dataloaders=validation_data_loader)
